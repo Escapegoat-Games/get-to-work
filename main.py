@@ -1,6 +1,8 @@
+import random
 import collections
 import pygame
 import vec2
+import utils
 
 WIDTH = 600
 HEIGHT = 400
@@ -10,21 +12,12 @@ BACKGROUND = (0, 0, 0)
 GRAVITY_ACC = (0, 0.2)
 DRAG = 0.2
 PLAYER_SPEED = 3
-JUMP_SPEED = 5
+JUMP_COOLDOWN = 100
 SCREEN_CENTER = (300, 200)
 
 
-def argmin(args):
-    best_min = None
-    idx = -1
-    for i, x in enumerate(args):
-        if best_min == None:
-            best_min = x
-            idx = i
-        elif x < best_min:
-            best_min = x
-            idx = i
-    return idx
+def time_diff_to_strength(time_diff):
+    return min(max(3, 0.06*time_diff), 8)
 
 
 class Camera:
@@ -59,17 +52,17 @@ class Block(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self, position):
         super().__init__()
-        self.image = pygame.Surface([10, 10])
+        self.image = pygame.Surface([16, 32])
         self.image.fill((255, 0, 0))
         self.rect = self.image.get_rect()
         self.rect.center = position
         self.velocity = (0, 0)
         self._last_jumped = 0
         self._is_grounded = False
-        self._is_collide_bottom_history = collections.deque(maxlen=10)
+        self._is_collide_bottom_history = collections.deque(maxlen=3)
 
     def update(self, blocks_list):
-        is_colide_bottom = False
+        is_collide_bottom = False
 
         self.velocity = vec2.add(self.velocity, GRAVITY_ACC)
 
@@ -85,28 +78,30 @@ class Player(pygame.sprite.Sprite):
         if blocks_hit_list:
             for hit_block in blocks_hit_list:
                 # Make sure player is always outside of block
-                left_dist = abs(self.rect.center[0] - hit_block.rect.left)
-                right_dist = abs(self.rect.center[0] - hit_block.rect.right)
-                top_dist = abs(self.rect.center[1] - hit_block.rect.top)
-                bottom_dist = abs(self.rect.center[1] - hit_block.rect.bottom)
-                min_idx = argmin(
-                    [left_dist, right_dist, top_dist, bottom_dist]
+                left_dist = abs(self.rect.right - hit_block.rect.left)
+                right_dist = abs(self.rect.left - hit_block.rect.right)
+                top_dist = abs(self.rect.bottom - hit_block.rect.top)
+                bottom_dist = abs(self.rect.top - hit_block.rect.bottom)
+                min_idx = utils.argmin(
+                    [top_dist, bottom_dist, left_dist, right_dist]
                 )
                 if min_idx == 0:
-                    self.rect.right = hit_block.rect.left
-                    self.velocity = (0, self.velocity[1])
-                elif min_idx == 1:
-                    self.rect.left = hit_block.rect.right
-                    self.velocity = (0, self.velocity[1])
-                elif min_idx == 2:
                     self.rect.bottom = hit_block.rect.top
                     self.velocity = (self.velocity[0], 0)
-                    is_colide_bottom = True
-                else:
+                    is_collide_bottom = True
+                elif min_idx == 1:
                     self.rect.top = hit_block.rect.bottom
                     self.velocity = (self.velocity[0], 0)
+                elif min_idx == 2:
+                    pass
+                    self.rect.right = hit_block.rect.left
+                    self.velocity = (0, self.velocity[1])
+                elif min_idx == 3:
+                    pass
+                    self.rect.left = hit_block.rect.right
+                    self.velocity = (0, self.velocity[1])
 
-        self._is_collide_bottom_history.append(is_colide_bottom)
+        self._is_collide_bottom_history.append(is_collide_bottom)
         self._is_grounded = len([
             x for x in self._is_collide_bottom_history if x
         ]) > 0
@@ -117,11 +112,12 @@ class Player(pygame.sprite.Sprite):
     def move_left(self):
         self.velocity = (-PLAYER_SPEED, self.velocity[1])
 
-    def jump(self):
+    def jump(self, strength):
         now = pygame.time.get_ticks()
-        if self._is_grounded and now - self._last_jumped >= 10:
+        time_diff = now - self._last_jumped
+        if self._is_grounded and time_diff >= JUMP_COOLDOWN:
             self._last_jumped = pygame.time.get_ticks()
-            self.velocity = vec2.add(self.velocity, (0, -JUMP_SPEED))
+            self.velocity = vec2.add(self.velocity, (0, -strength))
 
 
 def main():
@@ -129,16 +125,14 @@ def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     clock = pygame.time.Clock()
 
-    player = Player(position=(0, 0))
+    player = Player(position=(16, 0))
     players_list = pygame.sprite.Group()
     players_list.add(player)
 
     cam = Camera(player, (100, 50))
 
     blocks = [
-        Block(position=(0, 300), size=(50, 50)),
-        Block(position=(300, 300), size=(300, 50)),
-        Block(position=(300, 200), size=(50, 150)),
+        Block(position=(0, 300), size=(32, 32))
     ]
     blocks_list = pygame.sprite.Group()
     for b in blocks:
@@ -146,8 +140,12 @@ def main():
 
     is_k_left_down = False
     is_k_right_down = False
+    is_k_up_down = False
+    jump_start_time = 0
     running = True
     while running:
+        now = pygame.time.get_ticks()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -157,17 +155,28 @@ def main():
                 if event.key == pygame.K_RIGHT:
                     is_k_right_down = True
                 if event.key == pygame.K_UP:
-                    player.jump()
+                    jump_start_time = pygame.time.get_ticks()
+                    is_k_up_down = True
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT:
                     is_k_left_down = False
                 if event.key == pygame.K_RIGHT:
                     is_k_right_down = False
+                if event.key == pygame.K_UP:
+                    is_k_up_down = False
+                    time_diff = now - jump_start_time
+                    strength = time_diff_to_strength(time_diff)
+                    player.jump(strength)
 
         if is_k_left_down:
             player.move_left()
         if is_k_right_down:
             player.move_right()
+
+        time_diff = now - jump_start_time
+        if is_k_up_down and time_diff >= JUMP_COOLDOWN:
+            strength = time_diff_to_strength(time_diff)
+            player.jump(strength)
 
         players_list.update(blocks_list)
         blocks_list.update()
