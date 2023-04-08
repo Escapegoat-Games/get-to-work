@@ -1,4 +1,8 @@
-assets/spritesheets/tiles.dat,-32,0
+---
+ss_path: assets/spritesheets/tiles.dat
+offset_x: -32
+offset_y: 0
+---
 2----------------------------2
 2----------------------------2
 2000-----000-----------------2

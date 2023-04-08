@@ -1,5 +1,6 @@
 import pygame
 import spritesheet
+import utils
 
 
 class Block(pygame.sprite.Sprite):
@@ -13,17 +14,17 @@ class Block(pygame.sprite.Sprite):
 class Level:
     def __init__(self, path):
         with open(path, "r") as f:
-            data = f.read().split("\n")
-        header_data = data[0].split(",")
-        ss_path = header_data[0]
+            text = f.read()
+        header_data, data = utils.parse_dat(text)
+        ss_path = header_data["ss_path"]
         self.ss = spritesheet.Spritesheet(ss_path)
 
-        offset_x = int(header_data[1])
-        offset_y = int(header_data[2])
+        offset_x = int(header_data["offset_x"])
+        offset_y = int(header_data["offset_y"])
         curr_x = offset_x
         curr_y = offset_y
         self.blocks = []
-        for line in data[1:]:
+        for line in data:
             for c in line:
                 if c == "-":
                     pass

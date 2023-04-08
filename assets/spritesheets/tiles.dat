@@ -1,1 +1,6 @@
-assets/images/tiles.png,16,16,1
+---
+img_path: assets/images/tiles.png
+tile_w: 16
+tile_h: 16
+columns: 1
+---

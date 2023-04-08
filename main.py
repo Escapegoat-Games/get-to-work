@@ -1,25 +1,27 @@
+import enum
 import collections
 import pygame
 import spritesheet
 import level
+import animation
 import vec2
 import utils
 
-SCREEN_WIDTH = 640
-SCREEN_HEIGHT = 480
+SCREEN_WIDTH = 320
+SCREEN_HEIGHT = 240
 SCREEN_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
 SCREEN_CENTER = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 
-BACKGROUND = (0, 0, 0)
+BACKGROUND = (255, 0, 255)
 
 GRAVITY_ACC = (0, 0.2)
 DRAG = 0.2
-PLAYER_SPEED = 3
+PLAYER_SPEED = 2
 JUMP_COOLDOWN = 100
 
 
 def time_diff_to_strength(time_diff):
-    return min(max(3, 0.06*time_diff), 8)
+    return min(max(3, 0.06*time_diff), 5)
 
 
 class Camera:
@@ -42,19 +44,43 @@ class Camera:
             self.position = (self.position[0], player_y + h)
 
 
+class PlayerState(enum.Enum):
+    STANDING = 0
+    WALKING = 1
+    JUMPING = 2
+
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, position):
         super().__init__()
-        player_ss = spritesheet.Spritesheet("assets/spritesheets/player.dat")
-        self.image = player_ss.image_at(0)
-        self.rect = self.image.get_rect()
+        self.ss = spritesheet.Spritesheet(
+            "assets/spritesheets/player.dat")
+        self.image = self.ss.image_at(0)
+        self.rect = pygame.Rect(
+            (0, 0), (self.ss.tile_w, self.ss.tile_h))
         self.rect.center = position
         self.velocity = (0, 0)
         self._last_jumped = 0
         self._is_grounded = False
         self._is_collide_bottom_history = collections.deque(maxlen=3)
+        self.walk_anim = animation.Animation(
+            "assets/animations/player_walk.dat")
+        self.direction = 1
+        self.state = PlayerState.STANDING
 
     def update(self, blocks_list):
+        if self.state == PlayerState.STANDING:
+            self.image = self.ss.image_at(0)
+        elif self.state == PlayerState.WALKING:
+            self.walk_anim.update()
+            self.image = self.ss.image_at(
+                self.walk_anim.get_current_tile_idx())
+        if self.state == PlayerState.JUMPING:
+            self.image = self.ss.image_at(1)
+
+        if self.direction == -1:
+            self.image = pygame.transform.flip(self.image, True, False)
+
         is_collide_bottom = False
 
         self.velocity = vec2.add(self.velocity, GRAVITY_ACC)
@@ -82,15 +108,14 @@ class Player(pygame.sprite.Sprite):
                     self.rect.bottom = hit_block.rect.top
                     self.velocity = (self.velocity[0], 0)
                     is_collide_bottom = True
+                    self.state = PlayerState.STANDING
                 elif min_idx == 1:
                     self.rect.top = hit_block.rect.bottom
                     self.velocity = (self.velocity[0], 0)
                 elif min_idx == 2:
-                    pass
                     self.rect.right = hit_block.rect.left
                     self.velocity = (0, self.velocity[1])
                 elif min_idx == 3:
-                    pass
                     self.rect.left = hit_block.rect.right
                     self.velocity = (0, self.velocity[1])
 
@@ -100,12 +125,19 @@ class Player(pygame.sprite.Sprite):
         ]) > 0
 
     def move_right(self):
+        self.direction = 1
+        if self.state != PlayerState.JUMPING:
+            self.state = PlayerState.WALKING
         self.velocity = (PLAYER_SPEED, self.velocity[1])
 
     def move_left(self):
+        self.direction = -1
+        if self.state != PlayerState.JUMPING:
+            self.state = PlayerState.WALKING
         self.velocity = (-PLAYER_SPEED, self.velocity[1])
 
     def jump(self, strength):
+        self.state = PlayerState.JUMPING
         now = pygame.time.get_ticks()
         time_diff = now - self._last_jumped
         if self._is_grounded and time_diff >= JUMP_COOLDOWN:
@@ -124,7 +156,7 @@ def main():
     players_list = pygame.sprite.Group()
     players_list.add(player)
 
-    cam = Camera(player, (100, 50))
+    cam = Camera(player, (20, 20))
 
     lvl = level.Level("assets/levels/level01.dat")
 
@@ -174,8 +206,6 @@ def main():
         cam.update()
 
         screen.fill(BACKGROUND)
-        # players_list.draw(screen)
-        # blocks_list.draw(screen)
 
         screen.blit(player.image, vec2.add(
             vec2.add(
