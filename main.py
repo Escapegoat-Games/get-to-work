@@ -1,11 +1,14 @@
-import random
 import collections
 import pygame
+import spritesheet
+import level
 import vec2
 import utils
 
-WIDTH = 600
-HEIGHT = 400
+SCREEN_WIDTH = 640
+SCREEN_HEIGHT = 480
+SCREEN_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
+SCREEN_CENTER = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 
 BACKGROUND = (0, 0, 0)
 
@@ -13,7 +16,6 @@ GRAVITY_ACC = (0, 0.2)
 DRAG = 0.2
 PLAYER_SPEED = 3
 JUMP_COOLDOWN = 100
-SCREEN_CENTER = (300, 200)
 
 
 def time_diff_to_strength(time_diff):
@@ -40,20 +42,11 @@ class Camera:
             self.position = (self.position[0], player_y + h)
 
 
-class Block(pygame.sprite.Sprite):
-    def __init__(self, position, size):
-        super().__init__()
-        self.image = pygame.Surface(size)
-        self.image.fill((255, 255, 0))
-        self.rect = self.image.get_rect()
-        self.rect.center = position
-
-
 class Player(pygame.sprite.Sprite):
     def __init__(self, position):
         super().__init__()
-        self.image = pygame.Surface([16, 32])
-        self.image.fill((255, 0, 0))
+        player_ss = spritesheet.Spritesheet("assets/spritesheets/player.dat")
+        self.image = player_ss.image_at(0)
         self.rect = self.image.get_rect()
         self.rect.center = position
         self.velocity = (0, 0)
@@ -122,21 +115,18 @@ class Player(pygame.sprite.Sprite):
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen = pygame.display.set_mode(
+        SCREEN_SIZE, pygame.SCALED | pygame.RESIZABLE
+    )
     clock = pygame.time.Clock()
 
-    player = Player(position=(16, 0))
+    player = Player(position=(0, 0))
     players_list = pygame.sprite.Group()
     players_list.add(player)
 
     cam = Camera(player, (100, 50))
 
-    blocks = [
-        Block(position=(0, 300), size=(32, 32))
-    ]
-    blocks_list = pygame.sprite.Group()
-    for b in blocks:
-        blocks_list.add(b)
+    lvl = level.Level("assets/levels/level01.dat")
 
     is_k_left_down = False
     is_k_right_down = False
@@ -178,8 +168,8 @@ def main():
             strength = time_diff_to_strength(time_diff)
             player.jump(strength)
 
-        players_list.update(blocks_list)
-        blocks_list.update()
+        players_list.update(lvl.blocks_list)
+        lvl.blocks_list.update()
 
         cam.update()
 
@@ -193,7 +183,7 @@ def main():
             ),
             SCREEN_CENTER,
         ))
-        for b in blocks:
+        for b in lvl.blocks:
             screen.blit(b.image, vec2.add(
                 vec2.add(
                     b.rect.topleft, vec2.scale(cam.position, -1)
