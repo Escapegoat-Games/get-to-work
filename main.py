@@ -14,7 +14,7 @@ SCREEN_HEIGHT = 240
 SCREEN_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
 SCREEN_CENTER = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 
-BACKGROUND = (255, 0, 255)
+BACKGROUND = (255, 255, 255)
 
 GRAVITY_ACC = (0, 0.2)
 DRAG = 0.2
@@ -249,13 +249,15 @@ def main():
                 player.jump(strength)
         elif game_state == GameState.TEXTBOX_CONTROL:
             textbox.update()
-        players_list.update(lvl.blocks_list)
-        lvl.blocks_list.update()
+        players_list.update(lvl.collidable_blocks_list)
+        lvl.collidable_blocks_list.update()
         cam.update()
 
         # Render
         screen.fill(BACKGROUND)
-        for b in lvl.blocks:
+        for b in lvl.collidable_blocks:
+            screen.blit(b.image, to_screen_coords(b.rect.topleft))
+        for b in lvl.noncollidable_blocks:
             screen.blit(b.image, to_screen_coords(b.rect.topleft))
         screen.blit(npc.image, to_screen_coords(npc.rect.topleft))
         screen.blit(player.image, to_screen_coords(player.rect.topleft))
