@@ -1,5 +1,5 @@
 import pygame
-import spritesheet
+from spritesheet import Spritesheet
 import utils
 
 
@@ -27,7 +27,7 @@ class Level:
             text = f.read()
         header_data, data = utils.parse_dat(text)
         ss_path = header_data["ss_path"]
-        self.ss = spritesheet.Spritesheet(ss_path)
+        self.ss = Spritesheet(ss_path)
 
         offset_x = int(header_data["offset_x"])
         offset_y = int(header_data["offset_y"])

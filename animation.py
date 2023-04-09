@@ -17,7 +17,7 @@ class Animation:
                 "tile_idx": int(d[0]),
                 "delay_ms": int(d[1]),
             })
-        self.last_ms = pygame.time.get_ticks()
+        self.last_ms = None
         self.frame_idx = 0
         self.acc_ms = 0
 
@@ -27,6 +27,8 @@ class Animation:
 
     def update(self):
         now = pygame.time.get_ticks()
+        if self.last_ms == None:
+            self.last_ms = now
         self.acc_ms += now - self.last_ms
         self.last_ms = now
 

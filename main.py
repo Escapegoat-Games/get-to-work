@@ -1,9 +1,11 @@
 import enum
 import collections
 import pygame
-import spritesheet
-import level
-import animation
+from spritesheet import Spritesheet
+from level import Level
+from animation import Animation
+from textbox import Textbox
+from npc import NPC
 import vec2
 import utils
 
@@ -18,6 +20,11 @@ GRAVITY_ACC = (0, 0.2)
 DRAG = 0.2
 PLAYER_SPEED = 2
 JUMP_COOLDOWN = 100
+
+
+class GameState(enum.Enum):
+    PLAYER_CONTROL = 0
+    TEXTBOX_CONTROL = 1
 
 
 def time_diff_to_strength(time_diff):
@@ -53,7 +60,7 @@ class PlayerState(enum.Enum):
 class Player(pygame.sprite.Sprite):
     def __init__(self, position):
         super().__init__()
-        self.ss = spritesheet.Spritesheet(
+        self.ss = Spritesheet(
             "assets/spritesheets/player.dat")
         self.image = self.ss.image_at(0)
         self.rect = pygame.Rect(
@@ -63,7 +70,7 @@ class Player(pygame.sprite.Sprite):
         self._last_jumped = 0
         self._is_grounded = False
         self._is_collide_bottom_history = collections.deque(maxlen=3)
-        self.walk_anim = animation.Animation(
+        self.walk_anim = Animation(
             "assets/animations/player_walk.dat")
         self.direction = 1
         self.state = PlayerState.STANDING
@@ -152,13 +159,38 @@ def main():
     )
     clock = pygame.time.Clock()
 
+    game_state = GameState.PLAYER_CONTROL
+
+    textbox = Textbox()
+
     player = Player(position=(0, 0))
     players_list = pygame.sprite.Group()
     players_list.add(player)
 
+    npc = NPC(position=(16, 0), dialogue=[
+        {
+            "speaker": "Alice",
+            "text": "this is a text\nmore text",
+        },
+        {
+            "speaker": "Bob",
+            "text": "this is the next line",
+        },
+    ])
+    npcs_list = pygame.sprite.Group()
+    npcs_list.add(npc)
+
     cam = Camera(player, (20, 20))
 
-    lvl = level.Level("assets/levels/level01.dat")
+    def to_screen_coords(position):
+        return vec2.add(
+            vec2.add(
+                position, vec2.scale(cam.position, -1)
+            ),
+            SCREEN_CENTER,
+        )
+
+    lvl = Level("assets/levels/level01.dat")
 
     is_k_left_down = False
     is_k_right_down = False
@@ -168,6 +200,7 @@ def main():
     while running:
         now = pygame.time.get_ticks()
 
+        # Events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -179,6 +212,19 @@ def main():
                 if event.key == pygame.K_UP:
                     jump_start_time = pygame.time.get_ticks()
                     is_k_up_down = True
+                if event.key == pygame.K_z:
+                    if game_state == GameState.PLAYER_CONTROL:
+                        hit_npcs = pygame.sprite.spritecollide(
+                            player, npcs_list, False)
+                        if hit_npcs:
+                            game_state = GameState.TEXTBOX_CONTROL
+                            hit_npcs[0].talk(textbox)
+                    elif game_state == GameState.TEXTBOX_CONTROL:
+                        if textbox.has_next_line():
+                            textbox.move_next_line()
+                        else:
+                            textbox.is_visible = False
+                            game_state = GameState.PLAYER_CONTROL
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT:
                     is_k_left_down = False
@@ -186,40 +232,39 @@ def main():
                     is_k_right_down = False
                 if event.key == pygame.K_UP:
                     is_k_up_down = False
-                    time_diff = now - jump_start_time
-                    strength = time_diff_to_strength(time_diff)
-                    player.jump(strength)
+                    if game_state == GameState.PLAYER_CONTROL:
+                        time_diff = now - jump_start_time
+                        strength = time_diff_to_strength(time_diff)
+                        player.jump(strength)
 
-        if is_k_left_down:
-            player.move_left()
-        if is_k_right_down:
-            player.move_right()
-
-        time_diff = now - jump_start_time
-        if is_k_up_down and time_diff >= JUMP_COOLDOWN:
-            strength = time_diff_to_strength(time_diff)
-            player.jump(strength)
-
+        # Update
+        if game_state == GameState.PLAYER_CONTROL:
+            if is_k_left_down:
+                player.move_left()
+            if is_k_right_down:
+                player.move_right()
+            time_diff = now - jump_start_time
+            if is_k_up_down and time_diff >= JUMP_COOLDOWN:
+                strength = time_diff_to_strength(time_diff)
+                player.jump(strength)
+        elif game_state == GameState.TEXTBOX_CONTROL:
+            textbox.update()
         players_list.update(lvl.blocks_list)
         lvl.blocks_list.update()
-
         cam.update()
 
+        # Render
         screen.fill(BACKGROUND)
-
-        screen.blit(player.image, vec2.add(
-            vec2.add(
-                player.rect.topleft, vec2.scale(cam.position, -1)
-            ),
-            SCREEN_CENTER,
-        ))
         for b in lvl.blocks:
-            screen.blit(b.image, vec2.add(
-                vec2.add(
-                    b.rect.topleft, vec2.scale(cam.position, -1)
-                ),
-                SCREEN_CENTER,
-            ))
+            screen.blit(b.image, to_screen_coords(b.rect.topleft))
+        screen.blit(npc.image, to_screen_coords(npc.rect.topleft))
+        screen.blit(player.image, to_screen_coords(player.rect.topleft))
+        if textbox.is_visible:
+            textbox_img = textbox.get_image()
+            screen.blit(
+                textbox_img,
+                (0, SCREEN_HEIGHT - textbox_img.get_height() - 8),
+            )
 
         pygame.display.flip()
         clock.tick(60)
