@@ -11,6 +11,16 @@ class Block(pygame.sprite.Sprite):
         self.rect.center = position
 
 
+def char2idx(c):
+    v = ord(c)
+    if v >= ord("0") and v <= ord("9"):
+        return v - ord("0")
+    elif v >= ord("A") and v <= ord("Z"):
+        return v - ord("A") + 10
+    elif v >= ord("a") and v <= ord("z"):
+        return v - ord("a") + 36
+
+
 class Level:
     def __init__(self, path):
         with open(path, "r") as f:
@@ -29,8 +39,7 @@ class Level:
                 if c == "-":
                     pass
                 else:
-                    # TODO: this only takes values from 0-9. make it more flexible
-                    tile_idx = ord(c) - ord('0')
+                    tile_idx = char2idx(c)
                     b = Block(
                         position=(curr_x, curr_y),
                         image=self.ss.image_at(tile_idx),
