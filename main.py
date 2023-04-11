@@ -130,6 +130,8 @@ class Player(pygame.sprite.Sprite):
         self._is_grounded = len([
             x for x in self._is_collide_bottom_history if x
         ]) > 0
+        if not self._is_grounded:
+            self.state = PlayerState.JUMPING
 
     def move_right(self):
         self.direction = 1
@@ -144,7 +146,6 @@ class Player(pygame.sprite.Sprite):
         self.velocity = (-PLAYER_SPEED, self.velocity[1])
 
     def jump(self, strength):
-        self.state = PlayerState.JUMPING
         now = pygame.time.get_ticks()
         time_diff = now - self._last_jumped
         if self._is_grounded and time_diff >= JUMP_COOLDOWN:
