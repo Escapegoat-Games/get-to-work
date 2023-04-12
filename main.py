@@ -256,10 +256,11 @@ def main():
 
         # Render
         screen.fill(BACKGROUND)
-        for b in lvl.collidable_blocks:
-            screen.blit(b.image, to_screen_coords(b.rect.topleft))
-        for b in lvl.noncollidable_blocks:
-            screen.blit(b.image, to_screen_coords(b.rect.topleft))
+        for layer in lvl.layers:
+            for b in layer["collidable_blocks"]:
+                screen.blit(b.image, to_screen_coords(b.rect.topleft))
+            for b in layer["noncollidable_blocks"]:
+                screen.blit(b.image, to_screen_coords(b.rect.topleft))
         screen.blit(npc.image, to_screen_coords(npc.rect.topleft))
         screen.blit(player.image, to_screen_coords(player.rect.topleft))
         if textbox.is_visible:

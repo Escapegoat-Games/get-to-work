@@ -28,29 +28,41 @@ class Level:
 
         offset_x = int(header_data["offset_x"])
         offset_y = int(header_data["offset_y"])
-        collidable_blocks = set([c for c in header_data["collidable_blocks"]])
-        curr_x = offset_x
-        curr_y = offset_y
-        self.collidable_blocks = []
-        self.noncollidable_blocks = []
-        for line in data:
-            for c in line:
-                if c == "-":
-                    pass
-                else:
-                    tile_idx = char2idx(c)
-                    b = Block(
-                        position=(curr_x, curr_y),
-                        image=self.ss.image_at(tile_idx),
-                    )
-                    if c in collidable_blocks:
-                        self.collidable_blocks.append(b)
-                    else:
-                        self.noncollidable_blocks.append(b)
-                curr_x += self.ss.tile_w
-            curr_x = offset_x
-            curr_y += self.ss.tile_h
+        collidable_blocks_set = set(
+            [c for c in header_data["collidable_blocks"]])
 
+        self.layers = []
         self.collidable_blocks_list = pygame.sprite.Group()
-        for b in self.collidable_blocks:
-            self.collidable_blocks_list.add(b)
+        line_idx = 0
+        while line_idx < len(data):
+            collidable_blocks = []
+            noncollidable_blocks = []
+            curr_x = offset_x
+            curr_y = offset_y
+            while line_idx < len(data):
+                line = data[line_idx]
+                if line == "---":
+                    break
+                for c in line:
+                    if c == ".":
+                        pass
+                    else:
+                        tile_idx = char2idx(c)
+                        b = Block(
+                            position=(curr_x, curr_y),
+                            image=self.ss.image_at(tile_idx),
+                        )
+                        if c in collidable_blocks_set:
+                            collidable_blocks.append(b)
+                            self.collidable_blocks_list.add(b)
+                        else:
+                            noncollidable_blocks.append(b)
+                    curr_x += self.ss.tile_w
+                curr_x = offset_x
+                curr_y += self.ss.tile_h
+                line_idx += 1
+            self.layers.append({
+                "collidable_blocks": collidable_blocks,
+                "noncollidable_blocks": noncollidable_blocks,
+            })
+            line_idx += 1
