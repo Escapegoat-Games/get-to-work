@@ -21,6 +21,12 @@ DRAG = 0.2
 PLAYER_SPEED = 2
 JUMP_COOLDOWN = 100
 
+tiles_ss = Spritesheet("assets/spritesheets/tiles.dat")
+player_office_ss = Spritesheet("assets/spritesheets/player_office.dat")
+player_pjs_ss = Spritesheet("assets/spritesheets/player_pjs.dat")
+
+player_walk_anim = Animation("assets/animations/player_walk.dat")
+
 
 class GameState(enum.Enum):
     PLAYER_CONTROL = 0
@@ -60,19 +66,17 @@ class PlayerState(enum.Enum):
 class Player(pygame.sprite.Sprite):
     def __init__(self, position):
         super().__init__()
-        self.ss = Spritesheet(
-            "assets/spritesheets/player.dat")
+        self.ss = player_pjs_ss
         self.image = self.ss.image_at(0)
         self.rect = pygame.Rect(
             (0, 0), (self.ss.tile_w, self.ss.tile_h))
         self.rect.center = position
         self.velocity = (0, 0)
         self._last_jumped = 0
-        self._is_grounded = False
+        self._is_grounded = True
         self._is_collide_bottom_history = collections.deque(maxlen=3)
-        self.walk_anim = Animation(
-            "assets/animations/player_walk.dat")
-        self.direction = 1
+        self.walk_anim = player_walk_anim
+        self.is_flipped = False
         self.state = PlayerState.STANDING
 
     def update(self, blocks_list):
@@ -85,7 +89,7 @@ class Player(pygame.sprite.Sprite):
         if self.state == PlayerState.JUMPING:
             self.image = self.ss.image_at(1)
 
-        if self.direction == -1:
+        if self.is_flipped:
             self.image = pygame.transform.flip(self.image, True, False)
 
         is_collide_bottom = False
@@ -134,13 +138,13 @@ class Player(pygame.sprite.Sprite):
             self.state = PlayerState.JUMPING
 
     def move_right(self):
-        self.direction = 1
+        self.is_flipped = False
         if self.state != PlayerState.JUMPING:
             self.state = PlayerState.WALKING
         self.velocity = (PLAYER_SPEED, self.velocity[1])
 
     def move_left(self):
-        self.direction = -1
+        self.is_flipped = True
         if self.state != PlayerState.JUMPING:
             self.state = PlayerState.WALKING
         self.velocity = (-PLAYER_SPEED, self.velocity[1])
@@ -165,21 +169,35 @@ def main():
     textbox = Textbox()
 
     player = Player(position=(0, 0))
-    players_list = pygame.sprite.Group()
-    players_list.add(player)
+    player_group = pygame.sprite.Group()
+    player_group.add(player)
 
-    npc = NPC(position=(16, 0), dialogue=[
+    npcs = []
+
+    def clothes_npc_cb():
+        player.ss = player_office_ss
+        clothes_npc.tile_idx = -1
+        clothes_npc.dialogue = None
+        clothes_npc.dialogue_callback = None
+
+    clothes_npc = NPC(ss=tiles_ss, tile_idx=43, position=(32, -8), dialogue=[
         {
-            "speaker": "Alice",
-            "text": "this is a text\nmore text",
+            "speaker": "Ada",
+            "text": "God I hate this dress.\n\nI wish it was Wear Your Pajamas to Work Day.",
         },
         {
-            "speaker": "Bob",
-            "text": "this is the next line",
+            "speaker": "Ada",
+            "text": "Actually.......................nah.",
         },
-    ])
-    npcs_list = pygame.sprite.Group()
-    npcs_list.add(npc)
+        {
+            "speaker": "Ada",
+            "text": "Nope nope nope.\n\nNot again after Harold and that HR fiasco last year.",
+        },
+    ], dialogue_callback=clothes_npc_cb)
+    npcs.append(clothes_npc)
+
+    npc_group = pygame.sprite.Group()
+    npc_group.add(npcs)
 
     cam = Camera(player, (20, 20))
 
@@ -216,15 +234,23 @@ def main():
                 if event.key == pygame.K_z:
                     if game_state == GameState.PLAYER_CONTROL:
                         hit_npcs = pygame.sprite.spritecollide(
-                            player, npcs_list, False)
+                            player, npc_group, False)
                         if hit_npcs:
-                            game_state = GameState.TEXTBOX_CONTROL
-                            hit_npcs[0].talk(textbox)
+                            hit_npc = hit_npcs[0]
+                            if hit_npc.dialogue:
+                                game_state = GameState.TEXTBOX_CONTROL
+                                textbox.is_visible = True
+                                textbox.load(
+                                    hit_npc.dialogue,
+                                    hit_npc.dialogue_callback,
+                                )
                     elif game_state == GameState.TEXTBOX_CONTROL:
                         if textbox.has_next_line():
                             textbox.move_next_line()
                         else:
                             textbox.is_visible = False
+                            if textbox.callback:
+                                textbox.callback()
                             game_state = GameState.PLAYER_CONTROL
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT:
@@ -250,8 +276,9 @@ def main():
                 player.jump(strength)
         elif game_state == GameState.TEXTBOX_CONTROL:
             textbox.update()
-        players_list.update(lvl.collidable_blocks_list)
-        lvl.collidable_blocks_list.update()
+        player_group.update(lvl.collidable_block_group)
+        lvl.collidable_block_group.update()
+        npc_group.update()
         cam.update()
 
         # Render
@@ -261,7 +288,8 @@ def main():
                 screen.blit(b.image, to_screen_coords(b.rect.topleft))
             for b in layer["noncollidable_blocks"]:
                 screen.blit(b.image, to_screen_coords(b.rect.topleft))
-        screen.blit(npc.image, to_screen_coords(npc.rect.topleft))
+        for npc in npcs:
+            screen.blit(npc.image, to_screen_coords(npc.rect.topleft))
         screen.blit(player.image, to_screen_coords(player.rect.topleft))
         if textbox.is_visible:
             textbox_img = textbox.get_image()

@@ -13,6 +13,7 @@ class Textbox:
         self.delay_ms = 30
         self.textbox_img = pygame.image.load("assets/images/textbox.png")
         self.is_visible = False
+        self.callback = None
 
     def update(self):
         now = pygame.time.get_ticks()
@@ -32,10 +33,11 @@ class Textbox:
         self.line_idx += 1
         self.char_idx = 0
 
-    def load(self, dialogue):
+    def load(self, dialogue, callback):
         self.char_idx = 0
         self.line_idx = 0
         self.dialogue = dialogue
+        self.callback = callback
 
     def get_image(self):
         img = self.textbox_img.copy()

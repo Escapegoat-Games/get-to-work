@@ -32,7 +32,7 @@ class Level:
             [c for c in header_data["collidable_blocks"]])
 
         self.layers = []
-        self.collidable_blocks_list = pygame.sprite.Group()
+        self.collidable_block_group = pygame.sprite.Group()
         line_idx = 0
         while line_idx < len(data):
             collidable_blocks = []
@@ -54,7 +54,7 @@ class Level:
                         )
                         if c in collidable_blocks_set:
                             collidable_blocks.append(b)
-                            self.collidable_blocks_list.add(b)
+                            self.collidable_block_group.add(b)
                         else:
                             noncollidable_blocks.append(b)
                     curr_x += self.ss.tile_w
