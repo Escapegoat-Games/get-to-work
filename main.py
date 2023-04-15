@@ -70,7 +70,7 @@ class Player(pygame.sprite.Sprite):
         self.image = self.ss.image_at(0)
         self.rect = pygame.Rect(
             (0, 0), (self.ss.tile_w, self.ss.tile_h))
-        self.rect.center = position
+        self.rect.topleft = position
         self.velocity = (0, 0)
         self._last_jumped = 0
         self._is_grounded = True
@@ -168,22 +168,49 @@ def main():
 
     textbox = Textbox()
 
-    player = Player(position=(0, 0))
+    player = Player(position=(-48, 0))
     player_group = pygame.sprite.Group()
     player_group.add(player)
 
     npcs = []
+    autotalk_npcs = []
 
-    def clothes_npc_cb():
-        player.ss = player_office_ss
-        clothes_npc.tile_idx = -1
-        clothes_npc.dialogue = None
-        clothes_npc.dialogue_callback = None
-
-    clothes_npc = NPC(ss=tiles_ss, tile_idx=43, position=(32, -8), dialogue=[
+    start_npc = NPC(ss=tiles_ss, tile_idx=-1, position=(-48, 0), rect=pygame.Rect(0, 0, 16, 16), is_single_talk=True, dialogue=[
         {
             "speaker": "Ada",
-            "text": "God I hate this dress.\n\nI wish it was Wear Your Pajamas to Work Day.",
+            "text": "Ugh...My head hurts.",
+        },
+        {
+            "speaker": "Ada",
+            "text": "What was I even doing last night?",
+        },
+        {
+            "speaker": "Ada",
+            "text": "I remember falling asleep and then...",
+        },
+        {
+            "speaker": "Ada",
+            "text": "...",
+        },
+        {
+            "speaker": "Ada",
+            "text": "Yeah nah. No idea.",
+        },
+        {
+            "speaker": "Ada",
+            "text": "The time is.........9AM!? I'm going to be late!\n\nWhere did I put my suit?!",
+        },
+    ])
+    autotalk_npcs.append(start_npc)
+
+    def clothes_npc_cb():
+        clothes_npc.tile_idx = -1
+        player.ss = player_office_ss
+
+    clothes_npc = NPC(ss=tiles_ss, tile_idx=43, position=(32, -16), is_single_talk=True, dialogue=[
+        {
+            "speaker": "Ada",
+            "text": "God I hate this suit.\n\nI wish it was Wear Your Pajamas to Work Day.",
         },
         {
             "speaker": "Ada",
@@ -196,8 +223,42 @@ def main():
     ], dialogue_callback=clothes_npc_cb)
     npcs.append(clothes_npc)
 
+    leave_house_npc = NPC(ss=tiles_ss, tile_idx=-1, position=(368, -32), rect=pygame.Rect(0, 0, 16, 48), is_single_talk=True, dialogue=[
+        {
+            "speaker": "Ada",
+            "text": "Dang. The ground's gone.",
+        },
+        {
+            "speaker": "Ada",
+            "text": "What a pain in the ass. Making me jump.",
+        },
+    ])
+    autotalk_npcs.append(leave_house_npc)
+
+    sign1_npc = NPC(ss=tiles_ss, tile_idx=47, position=(400, 0), dialogue=[
+        {
+            "speaker": "Sign",
+            "text": "Endless pit of death ahead",
+        },
+        {
+            "speaker": "Ada",
+            "text": "(I guess I better not fall...)",
+        },
+    ])
+    npcs.append(sign1_npc)
+
+    sign2_npc = NPC(ss=tiles_ss, tile_idx=47, position=(1328, 208), dialogue=[
+        {
+            "speaker": "Sign",
+            "text": "Endless pit of death ahead (seriously)",
+        },
+    ])
+    npcs.append(sign2_npc)
+
     npc_group = pygame.sprite.Group()
     npc_group.add(npcs)
+    autotalk_npc_group = pygame.sprite.Group()
+    autotalk_npc_group.add(autotalk_npcs)
 
     cam = Camera(player, (20, 20))
 
@@ -237,20 +298,15 @@ def main():
                             player, npc_group, False)
                         if hit_npcs:
                             hit_npc = hit_npcs[0]
-                            if hit_npc.dialogue:
+                            if hit_npc.can_talk():
                                 game_state = GameState.TEXTBOX_CONTROL
-                                textbox.is_visible = True
-                                textbox.load(
-                                    hit_npc.dialogue,
-                                    hit_npc.dialogue_callback,
-                                )
+                                hit_npc.talk(textbox)
                     elif game_state == GameState.TEXTBOX_CONTROL:
                         if textbox.has_next_line():
                             textbox.move_next_line()
                         else:
                             textbox.is_visible = False
-                            if textbox.callback:
-                                textbox.callback()
+                            textbox.callback()
                             game_state = GameState.PLAYER_CONTROL
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT:
@@ -263,6 +319,14 @@ def main():
                         time_diff = now - jump_start_time
                         strength = time_diff_to_strength(time_diff)
                         player.jump(strength)
+
+        hit_npcs = pygame.sprite.spritecollide(
+            player, autotalk_npcs, False)
+        if hit_npcs:
+            hit_npc = hit_npcs[0]
+            if hit_npc.can_talk():
+                game_state = GameState.TEXTBOX_CONTROL
+                hit_npc.talk(textbox)
 
         # Update
         if game_state == GameState.PLAYER_CONTROL:
@@ -279,6 +343,7 @@ def main():
         player_group.update(lvl.collidable_block_group)
         lvl.collidable_block_group.update()
         npc_group.update()
+        autotalk_npc_group.update()
         cam.update()
 
         # Render
@@ -290,6 +355,8 @@ def main():
                 screen.blit(b.image, to_screen_coords(b.rect.topleft))
         for npc in npcs:
             screen.blit(npc.image, to_screen_coords(npc.rect.topleft))
+        for npc in autotalk_npcs:
+            screen.blit(npc.image, to_screen_coords(npc.rect.topleft))
         screen.blit(player.image, to_screen_coords(player.rect.topleft))
         if textbox.is_visible:
             textbox_img = textbox.get_image()
@@ -297,6 +364,17 @@ def main():
                 textbox_img,
                 (0, SCREEN_HEIGHT - textbox_img.get_height() - 8),
             )
+
+        debug_text = f"DEBUG:\nplayer_position:{player.rect.topleft}"
+        debug_font = textbox.font
+        debug_font_size = textbox.font_size
+        for idx, line in enumerate(debug_text.split("\n")):
+            debug_img = debug_font.render(
+                line,
+                False,
+                (0, 0, 0),
+            )
+            screen.blit(debug_img, (8, 8+debug_font_size*idx))
 
         pygame.display.flip()
         clock.tick(60)

@@ -3,8 +3,8 @@ import pygame
 
 class Textbox:
     def __init__(self):
-        self.font_size = 10
-        self.font = pygame.font.SysFont("arial", self.font_size)
+        self.font_size = 8
+        self.font = pygame.font.Font("assets/fonts/Grand9K Pixel.ttf", self.font_size)
         self.char_idx = 0
         self.line_idx = 0
         self.dialogue = []
