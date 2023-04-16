@@ -218,7 +218,7 @@ def main():
     ])
     autotalk_npcs.append(start_npc)
 
-    def clothes_npc_cb():
+    def clothes_npc_post():
         clothes_npc.tile_idx = -1
         player.ss = player_office_ss
 
@@ -233,9 +233,9 @@ def main():
         },
         {
             "speaker": "Ada",
-            "text": "Nope nope nope.\n\nNot again after Harold and that HR fiasco last year.",
+            "text": "Not again after Harold and that HR fiasco last year.",
         },
-    ], dialogue_callback=clothes_npc_cb)
+    ], post_dialogue=clothes_npc_post)
     npcs.append(clothes_npc)
 
     leave_house_npc = NPC(ss=tiles_ss, tile_idx=-1, position=(368, -32), rect=pygame.Rect(0, 0, 16, 48), is_single_talk=True, dialogue=[
@@ -269,6 +269,42 @@ def main():
         },
     ])
     npcs.append(sign2_npc)
+
+    # TODO: add more npcs...
+
+    def office_ender_post():
+        # TODO: the end
+        print("the end - office")
+
+    office_ender_npc = NPC(
+        ss=tiles_ss,
+        tile_idx=-1,
+        position=(4827, 16),
+        rect=pygame.Rect(0, 0, 16, 64),
+        is_single_talk=True,
+        dialogue=[
+            {
+                "speaker": "Ada",
+                "text": "Finally! I made it!",
+            },
+        ],
+        post_dialogue=office_ender_post,
+    )
+    autotalk_npcs.append(office_ender_npc)
+
+    def pit_ender_pre():
+        # TODO: the end
+        print("the end - pit")
+
+    pit_ender_npc = NPC(
+        ss=tiles_ss,
+        tile_idx=-1,
+        position=(0, 512),
+        rect=pygame.Rect(0, 0, 5000, 32),
+        is_single_talk=True,
+        pre_dialogue=pit_ender_pre
+    )
+    autotalk_npcs.append(pit_ender_npc)
 
     npc_group = pygame.sprite.Group()
     npc_group.add(npcs)
@@ -306,8 +342,11 @@ def main():
                         if hit_npcs:
                             hit_npc = hit_npcs[0]
                             if hit_npc.can_talk():
-                                game_state = GameState.TEXTBOX_CONTROL
                                 hit_npc.talk(textbox)
+                                if hit_npc.is_talking:
+                                    game_state = GameState.TEXTBOX_CONTROL
+                                elif textbox.callback:
+                                    textbox.callback()
                     elif game_state == GameState.TEXTBOX_CONTROL:
                         if textbox.has_next_line():
                             textbox.move_next_line()
@@ -332,8 +371,11 @@ def main():
         if hit_npcs:
             hit_npc = hit_npcs[0]
             if hit_npc.can_talk():
-                game_state = GameState.TEXTBOX_CONTROL
                 hit_npc.talk(textbox)
+                if hit_npc.is_talking:
+                    game_state = GameState.TEXTBOX_CONTROL
+                elif textbox.callback:
+                    textbox.callback()
 
         # Update
         if game_state == GameState.PLAYER_CONTROL:
@@ -358,15 +400,18 @@ def main():
         for layer in lvl.layers:
             for b in layer["collidable_blocks"]:
                 if is_block_on_screen(b, cam):
-                    screen.blit(b.image, to_screen_coords(b.rect.topleft, cam))
+                    screen.blit(b.image, to_screen_coords(
+                        b.rect.topleft, cam))
             for b in layer["noncollidable_blocks"]:
                 if is_block_on_screen(b, cam):
-                    screen.blit(b.image, to_screen_coords(b.rect.topleft, cam))
+                    screen.blit(b.image, to_screen_coords(
+                        b.rect.topleft, cam))
         for npc in npcs:
             screen.blit(npc.image, to_screen_coords(npc.rect.topleft, cam))
         for npc in autotalk_npcs:
             screen.blit(npc.image, to_screen_coords(npc.rect.topleft, cam))
-        screen.blit(player.image, to_screen_coords(player.rect.topleft, cam))
+        screen.blit(player.image, to_screen_coords(
+            player.rect.topleft, cam))
         if textbox.is_visible:
             textbox_img = textbox.get_image()
             screen.blit(

@@ -4,7 +4,8 @@ import pygame
 class Textbox:
     def __init__(self):
         self.font_size = 8
-        self.font = pygame.font.Font("assets/fonts/Grand9K Pixel.ttf", self.font_size)
+        self.font = pygame.font.Font(
+            "assets/fonts/Grand9K Pixel.ttf", self.font_size)
         self.char_idx = 0
         self.line_idx = 0
         self.dialogue = []
@@ -23,8 +24,10 @@ class Textbox:
         self.last_ms = now
         if self.acc_ms > self.delay_ms:
             self.acc_ms = 0
-            if self.char_idx < len(self.dialogue[self.line_idx]["text"]):
-                self.char_idx += 1
+            if self.line_idx < len(self.dialogue):
+                dialogue_line = self.dialogue[self.line_idx]
+                if self.char_idx < len(dialogue_line["text"]):
+                    self.char_idx += 1
 
     def has_next_line(self):
         return self.line_idx + 1 < len(self.dialogue)
@@ -41,21 +44,22 @@ class Textbox:
 
     def get_image(self):
         img = self.textbox_img.copy()
-        speaker_img = self.font.render(
-            self.dialogue[self.line_idx]["speaker"],
-            False,
-            (0, 0, 0),
-        )
-        img.blit(speaker_img, (24, 19))
-
-        texts = self.dialogue[self.line_idx]["text"][:self.char_idx].split(
-            "\n")
-        for idx, text in enumerate(texts):
-            text_img = self.font.render(
-                text,
+        if len(self.dialogue) > 0:
+            speaker_img = self.font.render(
+                self.dialogue[self.line_idx]["speaker"],
                 False,
                 (0, 0, 0),
             )
-            img.blit(text_img, (24, 40 + self.font_size*idx))
+            img.blit(speaker_img, (24, 19))
+
+            texts = self.dialogue[self.line_idx]["text"][:self.char_idx].split(
+                "\n")
+            for idx, text in enumerate(texts):
+                text_img = self.font.render(
+                    text,
+                    False,
+                    (0, 0, 0),
+                )
+                img.blit(text_img, (24, 40 + self.font_size*idx))
 
         return img

@@ -2,7 +2,7 @@ import pygame
 
 
 class NPC(pygame.sprite.Sprite):
-    def __init__(self, ss, tile_idx, position, rect=None, anim=None, is_single_talk=False, dialogue=[], dialogue_callback=None):
+    def __init__(self, ss, tile_idx, position, rect=None, anim=None, is_single_talk=False, dialogue=[], pre_dialogue=None, post_dialogue=None):
         super().__init__()
         self.ss = ss
         self.tile_idx = tile_idx
@@ -18,14 +18,15 @@ class NPC(pygame.sprite.Sprite):
         self.is_single_talk = is_single_talk
         self.is_talked_once = False
         self.is_talking = False
+        self.pre_dialogue = pre_dialogue
 
-        def dialogue_callback_wrapper():
+        def post_dialogue_wrapper():
             self.is_talking = False
             self.is_talked_once = True
-            if dialogue_callback:
-                dialogue_callback()
+            if post_dialogue:
+                post_dialogue()
 
-        self.dialogue_callback = dialogue_callback_wrapper
+        self.post_dialogue = post_dialogue_wrapper
 
     def can_talk(self):
         if self.is_talking:
@@ -36,11 +37,14 @@ class NPC(pygame.sprite.Sprite):
             return True
 
     def talk(self, textbox):
-        self.is_talking = True
-        textbox.is_visible = True
+        if self.pre_dialogue:
+            self.pre_dialogue()
+        if len(self.dialogue) > 0:
+            self.is_talking = True
+            textbox.is_visible = True
         textbox.load(
             self.dialogue,
-            self.dialogue_callback,
+            self.post_dialogue,
         )
 
     def update(self):
