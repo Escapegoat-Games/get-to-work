@@ -1,18 +1,24 @@
+import os
 import pygame
+import utils
 
 
 class Textbox:
     def __init__(self):
         self.font_size = 8
         self.font = pygame.font.Font(
-            "assets/fonts/Grand9K Pixel.ttf", self.font_size)
+            os.path.join(utils.get_resource_path(),
+                         "assets/fonts/Grand9K Pixel.ttf"),
+            self.font_size,
+        )
         self.char_idx = 0
         self.line_idx = 0
         self.dialogue = []
         self.last_ms = None
         self.acc_ms = 0
         self.delay_ms = 30
-        self.textbox_img = pygame.image.load("assets/images/textbox.png")
+        self.textbox_img = pygame.image.load(os.path.join(
+            utils.get_resource_path(), "assets/images/textbox.png"))
         self.is_visible = False
         self.callback = None
 

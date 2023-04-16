@@ -1,10 +1,11 @@
+import os
 import pygame
 import utils
 
 
 class Animation:
     def __init__(self, path):
-        with open(path, "r") as f:
+        with open(os.path.join(utils.get_resource_path(), path), "r") as f:
             text = f.read()
         header_data, data = utils.parse_dat(text)
         self.is_loop = header_data["is_loop"] == "1"

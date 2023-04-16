@@ -1,3 +1,5 @@
+import os
+import sys
 import re
 
 
@@ -29,3 +31,10 @@ def parse_dat(text):
             header_data[m.group(1)] = m.group(2)
     data = lines[last_idx+1:]
     return header_data, data
+
+
+def get_resource_path():
+    try:
+        return sys._MEIPASS
+    except AttributeError:
+        return os.getcwd()

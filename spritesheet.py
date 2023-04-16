@@ -1,14 +1,16 @@
+import os
 import pygame
 import utils
 
 
 class Spritesheet:
     def __init__(self, path):
-        with open(path, "r") as f:
+        with open(os.path.join(utils.get_resource_path(), path), "r") as f:
             text = f.read()
         header_data, _ = utils.parse_dat(text)
         img_path = header_data["img_path"]
-        self.sheet_img = pygame.image.load(img_path)
+        self.sheet_img = pygame.image.load(
+            os.path.join(utils.get_resource_path(), img_path))
         self.tile_w = int(header_data["tile_w"])
         self.tile_h = int(header_data["tile_h"])
         self.columns = int(header_data["columns"])

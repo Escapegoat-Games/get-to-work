@@ -1,3 +1,4 @@
+import os
 import enum
 import collections
 import pygame
@@ -8,6 +9,7 @@ from textbox import Textbox
 from npc import NPC
 import vec2
 import utils
+
 
 SCREEN_WIDTH = 320
 SCREEN_HEIGHT = 240
@@ -69,7 +71,8 @@ class Fader(pygame.sprite.Sprite):
 class EndingScreen(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.font = pygame.font.Font("assets/fonts/Grand9K Pixel.ttf", 10)
+        self.font = pygame.font.Font(os.path.join(
+            utils.get_resource_path(), "assets/fonts/Grand9K Pixel.ttf"), 10)
         self.rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
         self.image = pygame.Surface(self.rect.size, pygame.SRCALPHA)
         self.ending_text = "THE END"

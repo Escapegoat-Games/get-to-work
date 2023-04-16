@@ -1,3 +1,4 @@
+import os
 import pygame
 from spritesheet import Spritesheet
 import utils
@@ -20,7 +21,7 @@ def char2idx(c):
 
 class Level:
     def __init__(self, path):
-        with open(path, "r") as f:
+        with open(os.path.join(utils.get_resource_path(), path), "r") as f:
             text = f.read()
         header_data, data = utils.parse_dat(text)
         ss_path = header_data["ss_path"]
