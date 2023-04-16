@@ -54,7 +54,7 @@ class NPC(pygame.sprite.Sprite):
         if self.tile_idx == -1:
             # TODO: remove image after debug
             img = pygame.Surface(self.rect.size, pygame.SRCALPHA)
-            img.fill((255, 0, 255))
+            # img.fill((255, 0, 255))
             return img
         else:
             return self.ss.image_at(self.tile_idx)

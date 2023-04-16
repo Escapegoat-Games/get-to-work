@@ -31,10 +31,76 @@ player_walk_anim = Animation("assets/animations/player_walk.dat")
 class GameState(enum.Enum):
     PLAYER_CONTROL = 0
     TEXTBOX_CONTROL = 1
+    GAME_OVER = 2
 
 
-def time_diff_to_strength(time_diff):
-    return min(max(3, 0.06*time_diff), 5)
+class GameManager:
+    def __init__(self, game_state):
+        self.game_state = game_state
+        self.office_clothes_flag = False
+        self.left_home_flag = False
+
+
+class Fader(pygame.sprite.Sprite):
+    def __init__(self,  color=(0, 0, 0), delta=5):
+        super().__init__()
+        self.rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.image = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+        self.image.fill(color)
+        self.alpha = 255
+        self.image.set_alpha(self.alpha)
+        self.target_alpha = self.alpha
+        self.delta = delta
+
+    def fade_in(self):
+        self.target_alpha = 0
+
+    def fade_out(self):
+        self.target_alpha = 255
+
+    def update(self):
+        if self.alpha < self.target_alpha:
+            self.alpha += self.delta
+        elif self.alpha > self.target_alpha:
+            self.alpha -= self.delta
+        self.image.set_alpha(self.alpha)
+
+
+class EndingScreen(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.font = pygame.font.Font("assets/fonts/Grand9K Pixel.ttf", 10)
+        self.rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.image = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+        self.ending_text = "THE END"
+        self.start_ms = -1
+        self.is_playing = False
+        self.callback = None
+
+    def play(self, ending_text, callback=None):
+        self.start_ms = pygame.time.get_ticks()
+        self.is_playing = True
+        self.ending_text = ending_text
+        self.callback = callback
+
+    def update(self):
+        if self.is_playing:
+            now = pygame.time.get_ticks()
+            self.image = pygame.Surface(self.rect.size)
+            self.image.fill((0, 0, 0))
+            lines = self.ending_text.split("\n")
+            for idx, text in enumerate(lines):
+                text_img = self.font.render(
+                    text,
+                    False,
+                    (255, 255, 255),
+                )
+                text_img_rect = text_img.get_rect()
+                self.image.blit(text_img, (SCREEN_WIDTH // 2 - text_img_rect.width //
+                                           2, SCREEN_HEIGHT // 2 - text_img_rect.height // 2 + 10*idx))
+            if now - self.start_ms > 100:
+                if self.callback:
+                    self.callback()
 
 
 def to_screen_coords(position, camera):
@@ -70,6 +136,10 @@ class Camera:
             self.position = (self.position[0], player_y - h)
         if player_y < y - h:
             self.position = (self.position[0], player_y + h)
+
+
+def time_diff_to_strength(time_diff):
+    return min(max(3, 0.06*time_diff), 5)
 
 
 class PlayerState(enum.Enum):
@@ -179,9 +249,12 @@ def main():
     )
     clock = pygame.time.Clock()
 
-    game_state = GameState.PLAYER_CONTROL
+    game_manager = GameManager(GameState.PLAYER_CONTROL)
 
     textbox = Textbox()
+    fader = Fader(color=(0, 0, 0))
+
+    ending_screen = EndingScreen()
 
     player = Player(position=(-48, 0))
     player_group = pygame.sprite.Group()
@@ -190,37 +263,49 @@ def main():
     npcs = []
     autotalk_npcs = []
 
-    start_npc = NPC(ss=tiles_ss, tile_idx=-1, position=(-48, 0), rect=pygame.Rect(0, 0, 16, 16), is_single_talk=True, dialogue=[
-        {
-            "speaker": "Ada",
-            "text": "Ugh...My head hurts.",
-        },
-        {
-            "speaker": "Ada",
-            "text": "What was I even doing last night?",
-        },
-        {
-            "speaker": "Ada",
-            "text": "I remember falling asleep and then...",
-        },
-        {
-            "speaker": "Ada",
-            "text": "...",
-        },
-        {
-            "speaker": "Ada",
-            "text": "Yeah nah. No idea.",
-        },
-        {
-            "speaker": "Ada",
-            "text": "The time is.........9AM!? I'm going to be late!\n\nWhere did I put my suit?!",
-        },
-    ])
+    def start_pre():
+        fader.fade_in()
+
+    start_npc = NPC(
+        ss=tiles_ss,
+        tile_idx=-1,
+        position=(-48, 0),
+        rect=pygame.Rect(0, 0, 16, 16),
+        is_single_talk=True,
+        dialogue=[
+            {
+                "speaker": "Ada",
+                "text": "Ugh...My head hurts.",
+            },
+            {
+                "speaker": "Ada",
+                "text": "What was I even doing last night?",
+            },
+            {
+                "speaker": "Ada",
+                "text": "I remember falling asleep and then...",
+            },
+            {
+                "speaker": "Ada",
+                "text": "...",
+            },
+            {
+                "speaker": "Ada",
+                "text": "Yeah nah. No idea.",
+            },
+            {
+                "speaker": "Ada",
+                "text": "The time is.........9AM!? I'm going to be late!\n\nWhere did I put my suit?!",
+            },
+        ],
+        pre_dialogue=start_pre,
+    )
     autotalk_npcs.append(start_npc)
 
     def clothes_npc_post():
         clothes_npc.tile_idx = -1
         player.ss = player_office_ss
+        game_manager.office_clothes_flag = True
 
     clothes_npc = NPC(ss=tiles_ss, tile_idx=43, position=(32, -16), is_single_talk=True, dialogue=[
         {
@@ -238,16 +323,27 @@ def main():
     ], post_dialogue=clothes_npc_post)
     npcs.append(clothes_npc)
 
-    leave_house_npc = NPC(ss=tiles_ss, tile_idx=-1, position=(368, -32), rect=pygame.Rect(0, 0, 16, 48), is_single_talk=True, dialogue=[
-        {
-            "speaker": "Ada",
-            "text": "Dang. The ground's gone.",
-        },
-        {
-            "speaker": "Ada",
-            "text": "What a pain in the ass. Making me jump.",
-        },
-    ])
+    def leave_house_post():
+        game_manager.left_home_flag = True
+
+    leave_house_npc = NPC(
+        ss=tiles_ss,
+        tile_idx=-1,
+        position=(368, -32),
+        rect=pygame.Rect(0, 0, 16, 48),
+        is_single_talk=True,
+        dialogue=[
+            {
+                "speaker": "Ada",
+                "text": "Dang. The ground's gone.",
+            },
+            {
+                "speaker": "Ada",
+                "text": "What a pain in the ass. Making me jump.",
+            },
+        ],
+        post_dialogue=leave_house_post,
+    )
     autotalk_npcs.append(leave_house_npc)
 
     sign1_npc = NPC(ss=tiles_ss, tile_idx=47, position=(400, 0), dialogue=[
@@ -274,7 +370,90 @@ def main():
 
     def office_ender_post():
         # TODO: the end
-        print("the end - office")
+        fader.fade_out()
+        if game_manager.left_home_flag and game_manager.office_clothes_flag:
+            def ending_cb():
+                game_manager.game_state = GameState.GAME_OVER
+                ending_screen.play("THE END\n\nOFFICE")
+
+            game_manager.game_state = GameState.TEXTBOX_CONTROL
+            textbox.is_visible = True
+            textbox.load([
+                {
+                    "speaker": "???",
+                    "text": "...and so in the end, Ada made it to the office.",
+                },
+                {
+                    "speaker": "???",
+                    "text": "Although she was late (like really fucking late), no one noticed.",
+                },
+                {
+                    "speaker": "???",
+                    "text": "Ada worked a full 8 hours that day, and slipped out\n\njust before 6.",
+                },
+                {
+                    "speaker": "???",
+                    "text": "Walking down the street hop in step, a crazy thought\n\nsuddenly entered her brain.",
+                },
+                {
+                    "speaker": "???",
+                    "text": "However, it was a trifle matter, soon lost to time like many\n\nothers.",
+                },
+            ], ending_cb)
+        elif game_manager.left_home_flag and not game_manager.office_clothes_flag:
+            def ending_cb():
+                game_manager.game_state = GameState.GAME_OVER
+                ending_screen.play("THE END\n\nPAJAMAS")
+
+            game_manager.game_state = GameState.TEXTBOX_CONTROL
+            textbox.is_visible = True
+            textbox.load([
+                {
+                    "speaker": "???",
+                    "text": "...and so in the end, Ada made it to the office.",
+                },
+                {
+                    "speaker": "???",
+                    "text": "Although, in her haste she had forgotten to change out of her\n\npajamas.",
+                },
+                {
+                    "speaker": "???",
+                    "text": "Thankfully, it was Wear Your Pajamas to Work Day.",
+                },
+            ], ending_cb)
+        else:
+            def ending_cb():
+                game_manager.game_state = GameState.GAME_OVER
+                ending_screen.play("THE END\n\n???")
+
+            game_manager.game_state = GameState.TEXTBOX_CONTROL
+            textbox.is_visible = True
+            textbox.load([
+                {
+                    "speaker": "???",
+                    "text": "Somehow, Ada made it to the office without leaving her house.",
+                },
+                {
+                    "speaker": "???",
+                    "text": "Even Ada herself was confused as to how she did it.",
+                },
+                {
+                    "speaker": "???",
+                    "text": "...",
+                },
+                {
+                    "speaker": "???",
+                    "text": "What? I don't know how you did it either.\n\nMaybe file a bug or something...",
+                },
+                {
+                    "speaker": "???",
+                    "text": "Anyways.",
+                },
+                {
+                    "speaker": "???",
+                    "text": "Narrator out. Peace.",
+                },
+            ], ending_cb)
 
     office_ender_npc = NPC(
         ss=tiles_ss,
@@ -292,9 +471,33 @@ def main():
     )
     autotalk_npcs.append(office_ender_npc)
 
-    def pit_ender_pre():
-        # TODO: the end
-        print("the end - pit")
+    def pit_ender_post():
+        fader.fade_out()
+
+        def ending_cb():
+            game_manager.game_state = GameState.GAME_OVER
+            ending_screen.play("THE END\n\nPIT")
+
+        game_manager.game_state = GameState.TEXTBOX_CONTROL
+        textbox.is_visible = True
+        textbox.load([
+            {
+                "speaker": "???",
+                "text": "Ada was found 6 hours later by a passing jogger.",
+            },
+            {
+                "speaker": "???",
+                "text": "No one, not even her close friends and family, had a clue as to\n\nwhy she would have jumped in the first place.",
+            },
+            {
+                "speaker": "???",
+                "text": "Perhaps she had merely lost her footing in an accident.",
+            },
+            {
+                "speaker": "???",
+                "text": "Whatever the case, the Earth continued to spin\n\nand life moved on.",
+            },
+        ], ending_cb)
 
     pit_ender_npc = NPC(
         ss=tiles_ss,
@@ -302,7 +505,7 @@ def main():
         position=(0, 512),
         rect=pygame.Rect(0, 0, 5000, 32),
         is_single_talk=True,
-        pre_dialogue=pit_ender_pre
+        post_dialogue=pit_ender_post
     )
     autotalk_npcs.append(pit_ender_npc)
 
@@ -336,7 +539,7 @@ def main():
                     jump_start_time = pygame.time.get_ticks()
                     is_k_up_down = True
                 if event.key == pygame.K_z:
-                    if game_state == GameState.PLAYER_CONTROL:
+                    if game_manager.game_state == GameState.PLAYER_CONTROL:
                         hit_npcs = pygame.sprite.spritecollide(
                             player, npc_group, False)
                         if hit_npcs:
@@ -344,16 +547,16 @@ def main():
                             if hit_npc.can_talk():
                                 hit_npc.talk(textbox)
                                 if hit_npc.is_talking:
-                                    game_state = GameState.TEXTBOX_CONTROL
+                                    game_manager.game_state = GameState.TEXTBOX_CONTROL
                                 elif textbox.callback:
                                     textbox.callback()
-                    elif game_state == GameState.TEXTBOX_CONTROL:
+                    elif game_manager.game_state == GameState.TEXTBOX_CONTROL:
                         if textbox.has_next_line():
                             textbox.move_next_line()
                         else:
+                            game_manager.game_state = GameState.PLAYER_CONTROL
                             textbox.is_visible = False
                             textbox.callback()
-                            game_state = GameState.PLAYER_CONTROL
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT:
                     is_k_left_down = False
@@ -361,7 +564,7 @@ def main():
                     is_k_right_down = False
                 if event.key == pygame.K_UP:
                     is_k_up_down = False
-                    if game_state == GameState.PLAYER_CONTROL:
+                    if game_manager.game_state == GameState.PLAYER_CONTROL:
                         time_diff = now - jump_start_time
                         strength = time_diff_to_strength(time_diff)
                         player.jump(strength)
@@ -373,12 +576,12 @@ def main():
             if hit_npc.can_talk():
                 hit_npc.talk(textbox)
                 if hit_npc.is_talking:
-                    game_state = GameState.TEXTBOX_CONTROL
+                    game_manager.game_state = GameState.TEXTBOX_CONTROL
                 elif textbox.callback:
                     textbox.callback()
 
         # Update
-        if game_state == GameState.PLAYER_CONTROL:
+        if game_manager.game_state == GameState.PLAYER_CONTROL:
             if is_k_left_down:
                 player.move_left()
             if is_k_right_down:
@@ -387,13 +590,15 @@ def main():
             if is_k_up_down and time_diff >= JUMP_COOLDOWN:
                 strength = time_diff_to_strength(time_diff)
                 player.jump(strength)
-        elif game_state == GameState.TEXTBOX_CONTROL:
+        elif game_manager.game_state == GameState.TEXTBOX_CONTROL:
             textbox.update()
         player_group.update(lvl.collidable_block_group)
         lvl.collidable_block_group.update()
         npc_group.update()
         autotalk_npc_group.update()
         cam.update()
+        fader.update()
+        ending_screen.update()
 
         # Render
         screen.fill(BACKGROUND)
@@ -412,6 +617,8 @@ def main():
             screen.blit(npc.image, to_screen_coords(npc.rect.topleft, cam))
         screen.blit(player.image, to_screen_coords(
             player.rect.topleft, cam))
+        screen.blit(fader.image, (0, 0))
+        screen.blit(ending_screen.image, (0, 0))
         if textbox.is_visible:
             textbox_img = textbox.get_image()
             screen.blit(
@@ -419,16 +626,16 @@ def main():
                 (0, SCREEN_HEIGHT - textbox_img.get_height() - 8),
             )
 
-        debug_text = f"DEBUG:\nplayer_position:{player.rect.topleft}"
-        debug_font = textbox.font
-        debug_font_size = textbox.font_size
-        for idx, line in enumerate(debug_text.split("\n")):
-            debug_img = debug_font.render(
-                line,
-                False,
-                (0, 0, 0),
-            )
-            screen.blit(debug_img, (8, 8+debug_font_size*idx))
+        # debug_text = f"DEBUG:\nplayer_position:{player.rect.topleft}"
+        # debug_font = textbox.font
+        # debug_font_size = textbox.font_size
+        # for idx, line in enumerate(debug_text.split("\n")):
+        #     debug_img = debug_font.render(
+        #         line,
+        #         False,
+        #         (0, 0, 0),
+        #     )
+        #     screen.blit(debug_img, (8, 8+debug_font_size*idx))
 
         pygame.display.flip()
         clock.tick(60)
