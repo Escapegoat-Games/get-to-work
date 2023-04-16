@@ -37,6 +37,21 @@ def time_diff_to_strength(time_diff):
     return min(max(3, 0.06*time_diff), 5)
 
 
+def to_screen_coords(position, camera):
+    return vec2.add(
+        vec2.add(
+            position, vec2.scale(camera.position, -1)
+        ),
+        SCREEN_CENTER,
+    )
+
+
+def is_block_on_screen(block, camera):
+    coords = to_screen_coords(block.rect.topleft, camera)
+    img_rect = block.image.get_rect()
+    return coords[0] + img_rect.width >= 0 and coords[0] < SCREEN_WIDTH and coords[1] + img_rect.height >= 0 and coords[1] < SCREEN_HEIGHT
+
+
 class Camera:
     def __init__(self, player, size):
         self.player = player
@@ -74,7 +89,7 @@ class Player(pygame.sprite.Sprite):
         self.velocity = (0, 0)
         self._last_jumped = 0
         self._is_grounded = True
-        self._is_collide_bottom_history = collections.deque(maxlen=3)
+        self._is_collide_bottom_history = collections.deque(maxlen=5)
         self.walk_anim = player_walk_anim
         self.is_flipped = False
         self.state = PlayerState.STANDING
@@ -262,14 +277,6 @@ def main():
 
     cam = Camera(player, (20, 20))
 
-    def to_screen_coords(position):
-        return vec2.add(
-            vec2.add(
-                position, vec2.scale(cam.position, -1)
-            ),
-            SCREEN_CENTER,
-        )
-
     lvl = Level("assets/levels/level01.dat")
 
     is_k_left_down = False
@@ -350,14 +357,16 @@ def main():
         screen.fill(BACKGROUND)
         for layer in lvl.layers:
             for b in layer["collidable_blocks"]:
-                screen.blit(b.image, to_screen_coords(b.rect.topleft))
+                if is_block_on_screen(b, cam):
+                    screen.blit(b.image, to_screen_coords(b.rect.topleft, cam))
             for b in layer["noncollidable_blocks"]:
-                screen.blit(b.image, to_screen_coords(b.rect.topleft))
+                if is_block_on_screen(b, cam):
+                    screen.blit(b.image, to_screen_coords(b.rect.topleft, cam))
         for npc in npcs:
-            screen.blit(npc.image, to_screen_coords(npc.rect.topleft))
+            screen.blit(npc.image, to_screen_coords(npc.rect.topleft, cam))
         for npc in autotalk_npcs:
-            screen.blit(npc.image, to_screen_coords(npc.rect.topleft))
-        screen.blit(player.image, to_screen_coords(player.rect.topleft))
+            screen.blit(npc.image, to_screen_coords(npc.rect.topleft, cam))
+        screen.blit(player.image, to_screen_coords(player.rect.topleft, cam))
         if textbox.is_visible:
             textbox_img = textbox.get_image()
             screen.blit(
