@@ -256,6 +256,7 @@ def main():
 
     textbox = Textbox()
     fader = Fader(color=(0, 0, 0))
+    fader.fade_in()
 
     ending_screen = EndingScreen()
 
@@ -480,7 +481,6 @@ def main():
     # TODO: add more npcs...
 
     def office_ender_post():
-        # TODO: the end
         fader.fade_out()
         if game_manager.left_home_flag and game_manager.office_clothes_flag:
             def ending_cb():
@@ -569,7 +569,7 @@ def main():
     office_ender_npc = NPC(
         ss=tiles_ss,
         tile_idx=-1,
-        position=(4827, 16),
+        position=(4912, 16),
         rect=pygame.Rect(0, 0, 16, 64),
         is_single_talk=True,
         dialogue=[
