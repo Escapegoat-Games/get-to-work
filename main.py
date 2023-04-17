@@ -278,7 +278,7 @@ def main():
         dialogue=[
             {
                 "speaker": "Ada",
-                "text": "Ugh...My head hurts.",
+                "text": "Ow...My head hurts.",
             },
             {
                 "speaker": "Ada",
@@ -294,11 +294,15 @@ def main():
             },
             {
                 "speaker": "Ada",
-                "text": "Yeah nah. No idea.",
+                "text": "Yeah no idea.",
             },
             {
                 "speaker": "Ada",
-                "text": "The time is.........9AM!? I'm going to be late!\n\nWhere did I put my suit?!",
+                "text": "The time is.........9AM!? I'm going to be late!",
+            },
+            {
+                "speaker": "Ada",
+                "text": "At least I put my suit on the drawer.\n\nAll I need to do is walk over to it and press (Z) to put it on.",
             },
         ],
         pre_dialogue=start_pre,
@@ -321,7 +325,7 @@ def main():
         },
         {
             "speaker": "Ada",
-            "text": "Not again after Harold and that HR fiasco last year.",
+            "text": "Never again after Harold and that HR fiasco last year.",
         },
     ], post_dialogue=clothes_npc_post)
     npcs.append(clothes_npc)
@@ -338,11 +342,11 @@ def main():
         dialogue=[
             {
                 "speaker": "Ada",
-                "text": "Dang. The ground's gone.",
+                "text": "Dang what happened? The ground's floating.",
             },
             {
                 "speaker": "Ada",
-                "text": "What a pain in the ass. Making me jump.",
+                "text": "What a pain in the ass. Making me jump with the arrow pad.",
             },
         ],
         post_dialogue=leave_house_post,
@@ -368,6 +372,110 @@ def main():
         },
     ])
     npcs.append(sign2_npc)
+
+    sign3_npc = NPC(ss=tiles_ss, tile_idx=47, position=(944, 0), dialogue=[
+        {
+            "speaker": "Ada",
+            "text": "There's something pinned to the sign...",
+        },
+        {
+            "speaker": "???",
+            "text": "May 6th, 2023",
+        },
+        {
+            "speaker": "???",
+            "text": "I did not build it. I did not build it. I did not build it. I did not build it.\n\nI am not responsible. I am not responsible. I am not responsible.",
+        },
+        {
+            "speaker": "Ada",
+            "text": "...the rest of it is missing.",
+        },
+    ])
+    npcs.append(sign3_npc)
+
+    sign4_npc = NPC(ss=tiles_ss, tile_idx=47, position=(1712, -32), dialogue=[
+        {
+            "speaker": "Sign",
+            "text": "Having a bad day? Is your world falling apart?",
+        },
+        {
+            "speaker": "Sign",
+            "text": "Come and take a break at Franz's Coffee!\n\nYou can find us just down this ledge!",
+        },
+        {
+            "speaker": "Sign",
+            "text": "We're pet friendly too :3",
+        },
+    ])
+    npcs.append(sign4_npc)
+
+    sign5_npc = NPC(ss=tiles_ss, tile_idx=47, position=(1600, -176), dialogue=[
+        {
+            "speaker": "Ada",
+            "text": "There's something pinned to the sign...",
+        },
+        {
+            "speaker": "???",
+            "text": "Jan 2nd, 2023",
+        },
+        {
+            "speaker": "???",
+            "text": "Small-scale graviton tests were a success. Observations were\n\nwithin 2 microns of predictions theorized by the Weiss-Sakae\n\nconjecture.",
+        },
+        {
+            "speaker": "???",
+            "text": "Tomorrow we will begin our first practical field tests.\n\nTeam is apprehensive. They say it's too risky. They say\n\nwe are playing God.",
+        },
+        {
+            "speaker": "???",
+            "text": "However, it is too late to stop.\n\nWe must march on whether we like it or not.",
+        },
+        {
+            "speaker": "Ada",
+            "text": "...the rest of it is missing.",
+        },
+    ])
+    npcs.append(sign5_npc)
+
+    sign6_npc = NPC(ss=tiles_ss, tile_idx=47, position=(2464, 208), dialogue=[
+        {
+            "speaker": "Sign",
+            "text": "Franz's Coffee\n\nHome of the best macchiato in the Aether!",
+        },
+    ])
+    npcs.append(sign6_npc)
+
+    sign7_npc = NPC(ss=tiles_ss, tile_idx=47, position=(2800, 32), dialogue=[
+        {
+            "speaker": "Ada",
+            "text": "There's something pinned to the sign...",
+        },
+        {
+            "speaker": "???",
+            "text": "Mar 12th, 2023",
+        },
+        {
+            "speaker": "???",
+            "text": "Empirical tests are not looking good. Numbers are off from\n\nprediction by 2-6 microns.",
+        },
+        {
+            "speaker": "???",
+            "text": "The machine needs to change, but the engineers say it's too\n\nlate to modify spec.",
+        },
+        {
+            "speaker": "???",
+            "text": "Higher-ups are adamant we continue with what we have.",
+        },
+        {
+            "speaker": "???",
+            "text": "We can only hope that these mistakes do not blossom into\n\n irreversible catastrophe.",
+        },
+        {
+            "speaker": "Ada",
+            "text": "...the rest of it is missing.",
+        },
+    ])
+    npcs.append(sign7_npc)
 
     # TODO: add more npcs...
 
@@ -396,7 +504,7 @@ def main():
                 },
                 {
                     "speaker": "???",
-                    "text": "Walking down the street hop in step, a crazy thought\n\nsuddenly entered her brain.",
+                    "text": "Walking down the street hop in step, a crazy thought\n\nsuddenly entered her head.",
                 },
                 {
                     "speaker": "???",
@@ -629,16 +737,16 @@ def main():
                 (0, SCREEN_HEIGHT - textbox_img.get_height() - 8),
             )
 
-        # debug_text = f"DEBUG:\nplayer_position:{player.rect.topleft}"
-        # debug_font = textbox.font
-        # debug_font_size = textbox.font_size
-        # for idx, line in enumerate(debug_text.split("\n")):
-        #     debug_img = debug_font.render(
-        #         line,
-        #         False,
-        #         (0, 0, 0),
-        #     )
-        #     screen.blit(debug_img, (8, 8+debug_font_size*idx))
+        debug_text = f"DEBUG:\nplayer_position:{player.rect.topleft}"
+        debug_font = textbox.font
+        debug_font_size = textbox.font_size
+        for idx, line in enumerate(debug_text.split("\n")):
+            debug_img = debug_font.render(
+                line,
+                False,
+                (0, 0, 0),
+            )
+            screen.blit(debug_img, (8, 8+debug_font_size*idx))
 
         pygame.display.flip()
         clock.tick(60)
