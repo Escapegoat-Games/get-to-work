@@ -10,6 +10,7 @@ from npc import NPC
 import vec2
 import utils
 
+VERSION = "1.0.0"
 
 SCREEN_WIDTH = 320
 SCREEN_HEIGHT = 240
@@ -247,6 +248,10 @@ class Player(pygame.sprite.Sprite):
 
 def main():
     pygame.init()
+    pygame.display.set_caption(f"Get To Work - v{VERSION}")
+    icon_img = pygame.image.load(os.path.join(
+        utils.get_resource_path(), "assets/images/icon.ico"))
+    pygame.display.set_icon(icon_img)
     screen = pygame.display.set_mode(
         SCREEN_SIZE, pygame.SCALED | pygame.RESIZABLE
     )
@@ -737,16 +742,16 @@ def main():
                 (0, SCREEN_HEIGHT - textbox_img.get_height() - 8),
             )
 
-        debug_text = f"DEBUG:\nplayer_position:{player.rect.topleft}"
-        debug_font = textbox.font
-        debug_font_size = textbox.font_size
-        for idx, line in enumerate(debug_text.split("\n")):
-            debug_img = debug_font.render(
-                line,
-                False,
-                (0, 0, 0),
-            )
-            screen.blit(debug_img, (8, 8+debug_font_size*idx))
+        # debug_text = f"DEBUG:\nplayer_position:{player.rect.topleft}"
+        # debug_font = textbox.font
+        # debug_font_size = textbox.font_size
+        # for idx, line in enumerate(debug_text.split("\n")):
+        #     debug_img = debug_font.render(
+        #         line,
+        #         False,
+        #         (0, 0, 0),
+        #     )
+        #     screen.blit(debug_img, (8, 8+debug_font_size*idx))
 
         pygame.display.flip()
         clock.tick(60)
