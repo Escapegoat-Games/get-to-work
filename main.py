@@ -248,7 +248,7 @@ class Player(pygame.sprite.Sprite):
 
 def main():
     pygame.init()
-    pygame.display.set_caption(f"Get To Work - v{VERSION}")
+    pygame.display.set_caption(f"Get to Work - v{VERSION}")
     icon_img = pygame.image.load(os.path.join(
         utils.get_resource_path(), "assets/images/icon.ico"))
     pygame.display.set_icon(icon_img)
